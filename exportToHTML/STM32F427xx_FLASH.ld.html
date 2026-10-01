@@ -1,0 +1,249 @@
+<html>
+<head>
+<title>STM32F427xx_FLASH.ld</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #7a7e85;}
+.s1 { color: #bcbec4;}
+.s2 { color: #cf8e6d;}
+.s3 { color: #bcbec4;}
+.s4 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+STM32F427xx_FLASH.ld</font>
+</center></td></tr></table>
+<pre><span class="s0">/* 
+****************************************************************************** 
+** 
+ 
+**  File        : LinkerScript.ld 
+** 
+**  Author      : STM32CubeMX 
+** 
+**  Abstract    : Linker script for STM32F427IIHx series 
+**                2048Kbytes FLASH and 256Kbytes RAM 
+** 
+**                Set heap size, stack size and stack location according 
+**                to application requirements. 
+** 
+**                Set memory bank area and size if external memory is used. 
+** 
+**  Target      : STMicroelectronics STM32 
+** 
+**  Distribution: The file is distributed “as is,” without any warranty 
+**                of any kind. 
+** 
+***************************************************************************** 
+** @attention 
+** 
+** &lt;h2&gt;&lt;center&gt;&amp;copy; COPYRIGHT(c) 2025 STMicroelectronics&lt;/center&gt;&lt;/h2&gt; 
+** 
+** Redistribution and use in source and binary forms, with or without modification, 
+** are permitted provided that the following conditions are met: 
+**   1. Redistributions of source code must retain the above copyright notice, 
+**      this list of conditions and the following disclaimer. 
+**   2. Redistributions in binary form must reproduce the above copyright notice, 
+**      this list of conditions and the following disclaimer in the documentation 
+**      and/or other materials provided with the distribution. 
+**   3. Neither the name of STMicroelectronics nor the names of its contributors 
+**      may be used to endorse or promote products derived from this software 
+**      without specific prior written permission. 
+** 
+** THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS &quot;AS IS&quot; 
+** AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+** IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE 
+** DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE 
+** FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+** DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+** SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+** CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+** OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
+** OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+** 
+***************************************************************************** 
+*/</span>
+
+<span class="s0">/* Entry Point */</span>
+<span class="s2">ENTRY</span><span class="s3">(Reset_Handler)</span>
+
+<span class="s0">/* Highest address of the user mode stack */</span>
+<span class="s3">_estack </span><span class="s1">= </span><span class="s2">ORIGIN</span><span class="s3">(RAM) + </span><span class="s2">LENGTH</span><span class="s3">(RAM);    </span><span class="s0">/* end of RAM */</span>
+<span class="s3">_sstack </span><span class="s1">= </span><span class="s3">_estack </span><span class="s1">- </span><span class="s3">_Min_Stack_Size;</span>
+<span class="s0">/* Generate a link error if heap and stack don't fit into RAM */</span>
+<span class="s3">_Min_Heap_Size </span><span class="s1">= </span><span class="s4">0x200</span><span class="s3">;      </span><span class="s0">/* required amount of heap  */</span>
+<span class="s3">_Min_Stack_Size </span><span class="s1">= </span><span class="s4">0x400</span><span class="s3">; </span><span class="s0">/* required amount of stack */</span>
+
+<span class="s0">/* Specify the memory areas */</span>
+<span class="s2">MEMORY</span>
+<span class="s3">{</span>
+<span class="s3">RAM (xrw)      </span><span class="s1">: </span><span class="s2">ORIGIN </span><span class="s1">= </span><span class="s4">0x20000000</span><span class="s3">, </span><span class="s2">LENGTH </span><span class="s1">= </span><span class="s4">192K</span>
+<span class="s3">CCMRAM (xrw)      </span><span class="s1">: </span><span class="s2">ORIGIN </span><span class="s1">= </span><span class="s4">0x10000000</span><span class="s3">, </span><span class="s2">LENGTH </span><span class="s1">= </span><span class="s4">64K</span>
+<span class="s3">FLASH (rx)      </span><span class="s1">: </span><span class="s2">ORIGIN </span><span class="s1">= </span><span class="s4">0x8000000</span><span class="s3">, </span><span class="s2">LENGTH </span><span class="s1">= </span><span class="s4">2048K</span>
+<span class="s3">}</span>
+
+<span class="s0">/* Define output sections */</span>
+<span class="s2">SECTIONS</span>
+<span class="s3">{</span>
+  <span class="s0">/* The startup code goes first into FLASH */</span>
+  <span class="s3">.isr_vector </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s2">KEEP</span><span class="s3">(*(.isr_vector)) </span><span class="s0">/* Startup code */</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s0">/* The program code and other data goes into FLASH */</span>
+  <span class="s3">.text </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">*(.text)           </span><span class="s0">/* .text sections (code) */</span>
+    <span class="s3">*(.text*)          </span><span class="s0">/* .text* sections (code) */</span>
+    <span class="s3">*(.glue_7)         </span><span class="s0">/* glue arm to thumb code */</span>
+    <span class="s3">*(.glue_7t)        </span><span class="s0">/* glue thumb to arm code */</span>
+    <span class="s3">*(.eh_frame)</span>
+
+    <span class="s2">KEEP </span><span class="s3">(*(.init))</span>
+    <span class="s2">KEEP </span><span class="s3">(*(.fini))</span>
+
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">_etext </span><span class="s1">= </span><span class="s3">.;        </span><span class="s0">/* define a global symbols at end of code */</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s0">/* Constant data goes into FLASH */</span>
+  <span class="s3">.rodata </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">*(.rodata)         </span><span class="s0">/* .rodata sections (constants, strings, etc.) */</span>
+    <span class="s3">*(.rodata*)        </span><span class="s0">/* .rodata* sections (constants, strings, etc.) */</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s3">.ARM.extab (READONLY) </span><span class="s1">: </span><span class="s0">/* The &quot;READONLY&quot; keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">*(.ARM.extab* .gnu.linkonce.armextab.*)</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s3">.ARM (READONLY) </span><span class="s1">: </span><span class="s0">/* The &quot;READONLY&quot; keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">__exidx_start </span><span class="s1">= </span><span class="s3">.;</span>
+    <span class="s3">*(.ARM.exidx*)</span>
+    <span class="s3">__exidx_end </span><span class="s1">= </span><span class="s3">.;</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s3">.preinit_array (READONLY) </span><span class="s1">: </span><span class="s0">/* The &quot;READONLY&quot; keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s2">PROVIDE_HIDDEN </span><span class="s3">(__preinit_array_start </span><span class="s1">= </span><span class="s3">.);</span>
+    <span class="s2">KEEP </span><span class="s3">(*(.preinit_array*))</span>
+    <span class="s2">PROVIDE_HIDDEN </span><span class="s3">(__preinit_array_end </span><span class="s1">= </span><span class="s3">.);</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s3">.init_array (READONLY) </span><span class="s1">: </span><span class="s0">/* The &quot;READONLY&quot; keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s2">PROVIDE_HIDDEN </span><span class="s3">(__init_array_start </span><span class="s1">= </span><span class="s3">.);</span>
+    <span class="s2">KEEP </span><span class="s3">(*(</span><span class="s2">SORT</span><span class="s3">(.init_array.*)))</span>
+    <span class="s2">KEEP </span><span class="s3">(*(.init_array*))</span>
+    <span class="s2">PROVIDE_HIDDEN </span><span class="s3">(__init_array_end </span><span class="s1">= </span><span class="s3">.);</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s3">.fini_array (READONLY) </span><span class="s1">: </span><span class="s0">/* The &quot;READONLY&quot; keyword is only supported in GCC11 and later, remove it if using GCC10 or earlier. */</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s2">PROVIDE_HIDDEN </span><span class="s3">(__fini_array_start </span><span class="s1">= </span><span class="s3">.);</span>
+    <span class="s2">KEEP </span><span class="s3">(*(</span><span class="s2">SORT</span><span class="s3">(.fini_array.*)))</span>
+    <span class="s2">KEEP </span><span class="s3">(*(.fini_array*))</span>
+    <span class="s2">PROVIDE_HIDDEN </span><span class="s3">(__fini_array_end </span><span class="s1">= </span><span class="s3">.);</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">} &gt;FLASH</span>
+
+  <span class="s0">/* used by the startup to initialize data */</span>
+  <span class="s3">_sidata </span><span class="s1">= </span><span class="s2">LOADADDR</span><span class="s3">(.data);</span>
+
+  <span class="s0">/* Initialized data sections goes into RAM, load LMA copy after code */</span>
+  <span class="s3">.data </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">_sdata </span><span class="s1">= </span><span class="s3">.;        </span><span class="s0">/* create a global symbol at data start */</span>
+    <span class="s3">*(.data)           </span><span class="s0">/* .data sections */</span>
+    <span class="s3">*(.data*)          </span><span class="s0">/* .data* sections */</span>
+    <span class="s3">*(.RamFunc)        </span><span class="s0">/* .RamFunc sections */</span>
+    <span class="s3">*(.RamFunc*)       </span><span class="s0">/* .RamFunc* sections */</span>
+
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">_edata </span><span class="s1">= </span><span class="s3">.;        </span><span class="s0">/* define a global symbol at data end */</span>
+  <span class="s3">} &gt;RAM </span><span class="s2">AT</span><span class="s3">&gt; FLASH</span>
+
+  <span class="s3">_siccmram </span><span class="s1">= </span><span class="s2">LOADADDR</span><span class="s3">(.ccmram);</span>
+
+  <span class="s0">/* CCM-RAM section 
+  * 
+  * IMPORTANT NOTE! 
+  * If initialized variables will be placed in this section, 
+  * the startup code needs to be modified to copy the init-values. 
+  */</span>
+  <span class="s3">.ccmram </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">_sccmram </span><span class="s1">= </span><span class="s3">.;       </span><span class="s0">/* create a global symbol at ccmram start */</span>
+    <span class="s3">*(.ccmram)</span>
+    <span class="s3">*(.ccmram*)</span>
+
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">_eccmram </span><span class="s1">= </span><span class="s3">.;       </span><span class="s0">/* create a global symbol at ccmram end */</span>
+  <span class="s3">} &gt;CCMRAM </span><span class="s2">AT</span><span class="s3">&gt; FLASH</span>
+
+
+  <span class="s0">/* Uninitialized data section */</span>
+  <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+  <span class="s3">.bss </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s0">/* This is used by the startup in order to initialize the .bss secion */</span>
+    <span class="s3">_sbss </span><span class="s1">= </span><span class="s3">.;         </span><span class="s0">/* define a global symbol at bss start */</span>
+    <span class="s3">__bss_start__ </span><span class="s1">= </span><span class="s3">_sbss;</span>
+    <span class="s3">*(.bss)</span>
+    <span class="s3">*(.bss*)</span>
+    <span class="s3">*(</span><span class="s2">COMMON</span><span class="s3">)</span>
+
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">4</span><span class="s3">);</span>
+    <span class="s3">_ebss </span><span class="s1">= </span><span class="s3">.;         </span><span class="s0">/* define a global symbol at bss end */</span>
+    <span class="s3">__bss_end__ </span><span class="s1">= </span><span class="s3">_ebss;</span>
+  <span class="s3">} &gt;RAM</span>
+
+  <span class="s0">/* User_heap_stack section, used to check that there is enough RAM left */</span>
+  <span class="s3">._user_heap_stack </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">8</span><span class="s3">);</span>
+    <span class="s2">PROVIDE </span><span class="s3">( end </span><span class="s1">= </span><span class="s3">. );</span>
+    <span class="s2">PROVIDE </span><span class="s3">( _end </span><span class="s1">= </span><span class="s3">. );</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s3">. + _Min_Heap_Size;</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s3">. + _Min_Stack_Size;</span>
+    <span class="s3">. </span><span class="s1">= </span><span class="s2">ALIGN</span><span class="s3">(</span><span class="s4">8</span><span class="s3">);</span>
+  <span class="s3">} &gt;RAM</span>
+
+
+
+  <span class="s0">/* Remove information from the standard libraries */</span>
+  <span class="s2">/DISCARD/ </span><span class="s1">:</span>
+  <span class="s3">{</span>
+    <span class="s3">libc.a ( * )</span>
+    <span class="s3">libm.a ( * )</span>
+    <span class="s3">libgcc.a ( * )</span>
+  <span class="s3">}</span>
+
+<span class="s3">}</span>
+
+
+</pre>
+</body>
+</html>

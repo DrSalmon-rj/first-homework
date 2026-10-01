@@ -1,0 +1,554 @@
+<html>
+<head>
+<title>startup_stm32f427xx.s</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #bcbec4;}
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+startup_stm32f427xx.s</font>
+</center></td></tr></table>
+<pre><span class="s0">/**</span>
+  <span class="s0">******************************************************************************</span>
+  <span class="s0">* @file      startup_stm32f427xx.s</span>
+  <span class="s0">* @author    MCD Application Team</span>
+  <span class="s0">* @brief     STM32F427xx Devices vector table for GCC based toolchains. </span>
+  <span class="s0">*            This module performs:</span>
+  <span class="s0">*                - Set the initial SP</span>
+  <span class="s0">*                - Set the initial PC == Reset_Handler,</span>
+  <span class="s0">*                - Set the vector table entries with the exceptions ISR address</span>
+  <span class="s0">*                - Branches to main in the C library (which eventually</span>
+  <span class="s0">*                  calls main()).</span>
+  <span class="s0">*            After Reset the Cortex-M4 processor is in Thread mode,</span>
+  <span class="s0">*            priority is Privileged, and the Stack is set to Main.</span>
+  <span class="s0">******************************************************************************</span>
+  <span class="s0">* @attention</span>
+  <span class="s0">*</span>
+  <span class="s0">* Copyright (c) 2017 STMicroelectronics.</span>
+  <span class="s0">* All rights reserved.</span>
+  <span class="s0">*</span>
+  <span class="s0">* This software is licensed under terms that can be found in the LICENSE file</span>
+  <span class="s0">* in the root directory of this software component.</span>
+  <span class="s0">* If no LICENSE file comes with this software, it is provided AS-IS.</span>
+  <span class="s0">*</span>
+  <span class="s0">******************************************************************************</span>
+  <span class="s0">*/</span>
+    
+  <span class="s0">.syntax unified</span>
+  <span class="s0">.cpu cortex-m4</span>
+  <span class="s0">.fpu softvfp</span>
+  <span class="s0">.thumb</span>
+
+<span class="s0">.global  g_pfnVectors</span>
+<span class="s0">.global  Default_Handler</span>
+
+<span class="s0">/* start address for the initialization values of the .data section. </span>
+<span class="s0">defined in linker script */</span>
+<span class="s0">.word  _sidata</span>
+<span class="s0">/* start address for the .data section. defined in linker script */  </span>
+<span class="s0">.word  _sdata</span>
+<span class="s0">/* end address for the .data section. defined in linker script */</span>
+<span class="s0">.word  _edata</span>
+<span class="s0">/* start address for the .bss section. defined in linker script */</span>
+<span class="s0">.word  _sbss</span>
+<span class="s0">/* end address for the .bss section. defined in linker script */</span>
+<span class="s0">.word  _ebss</span>
+<span class="s0">/* stack used for SystemInit_ExtMemCtl; always internal RAM used */</span>
+
+<span class="s0">/**</span>
+ <span class="s0">* @brief  This is the code that gets called when the processor first</span>
+ <span class="s0">*          starts execution following a reset event. Only the absolutely</span>
+ <span class="s0">*          necessary set is performed, after which the application</span>
+ <span class="s0">*          supplied main() routine is called. </span>
+ <span class="s0">* @param  None</span>
+ <span class="s0">* @retval : None</span>
+<span class="s0">*/</span>
+
+    <span class="s0">.section  .text.Reset_Handler</span>
+  <span class="s0">.weak  Reset_Handler</span>
+  <span class="s0">.type  Reset_Handler, %function</span>
+<span class="s0">Reset_Handler:  </span>
+  <span class="s0">ldr   sp, =_estack      /* set stack pointer */</span>
+  
+<span class="s0">/* Call the clock system initialization function.*/</span>
+  <span class="s0">bl  SystemInit   </span>
+
+<span class="s0">/* Copy the data segment initializers from flash to SRAM */  </span>
+  <span class="s0">ldr r0, =_sdata</span>
+  <span class="s0">ldr r1, =_edata</span>
+  <span class="s0">ldr r2, =_sidata</span>
+  <span class="s0">movs r3, #0</span>
+  <span class="s0">b LoopCopyDataInit</span>
+
+<span class="s0">CopyDataInit:</span>
+  <span class="s0">ldr r4, [r2, r3]</span>
+  <span class="s0">str r4, [r0, r3]</span>
+  <span class="s0">adds r3, r3, #4</span>
+
+<span class="s0">LoopCopyDataInit:</span>
+  <span class="s0">adds r4, r0, r3</span>
+  <span class="s0">cmp r4, r1</span>
+  <span class="s0">bcc CopyDataInit</span>
+  
+<span class="s0">/* Zero fill the bss segment. */</span>
+  <span class="s0">ldr r2, =_sbss</span>
+  <span class="s0">ldr r4, =_ebss</span>
+  <span class="s0">movs r3, #0</span>
+  <span class="s0">b LoopFillZerobss</span>
+
+<span class="s0">FillZerobss:</span>
+  <span class="s0">str  r3, [r2]</span>
+  <span class="s0">adds r2, r2, #4</span>
+
+<span class="s0">LoopFillZerobss:</span>
+  <span class="s0">cmp r2, r4</span>
+  <span class="s0">bcc FillZerobss</span>
+  
+<span class="s0">/* Call static constructors */</span>
+    <span class="s0">bl __libc_init_array</span>
+<span class="s0">/* Call the application's entry point.*/</span>
+  <span class="s0">bl  main</span>
+  <span class="s0">bx  lr    </span>
+<span class="s0">.size  Reset_Handler, .-Reset_Handler</span>
+
+<span class="s0">/**</span>
+ <span class="s0">* @brief  This is the code that gets called when the processor receives an </span>
+ <span class="s0">*         unexpected interrupt.  This simply enters an infinite loop, preserving</span>
+ <span class="s0">*         the system state for examination by a debugger.</span>
+ <span class="s0">* @param  None     </span>
+ <span class="s0">* @retval None       </span>
+<span class="s0">*/</span>
+    <span class="s0">.section  .text.Default_Handler,&quot;ax&quot;,%progbits</span>
+<span class="s0">Default_Handler:</span>
+<span class="s0">Infinite_Loop:</span>
+  <span class="s0">b  Infinite_Loop</span>
+  <span class="s0">.size  Default_Handler, .-Default_Handler</span>
+<span class="s0">/******************************************************************************</span>
+<span class="s0">*</span>
+<span class="s0">* The minimal vector table for a Cortex M3. Note that the proper constructs</span>
+<span class="s0">* must be placed on this to ensure that it ends up at physical address</span>
+<span class="s0">* 0x0000.0000.</span>
+<span class="s0">* </span>
+<span class="s0">*******************************************************************************/</span>
+   <span class="s0">.section  .isr_vector,&quot;a&quot;,%progbits</span>
+  <span class="s0">.type  g_pfnVectors, %object</span>
+   
+   
+<span class="s0">g_pfnVectors:</span>
+  <span class="s0">.word  _estack</span>
+  <span class="s0">.word  Reset_Handler</span>
+
+  <span class="s0">.word  NMI_Handler</span>
+  <span class="s0">.word  HardFault_Handler</span>
+  <span class="s0">.word  MemManage_Handler</span>
+  <span class="s0">.word  BusFault_Handler</span>
+  <span class="s0">.word  UsageFault_Handler</span>
+  <span class="s0">.word  0</span>
+  <span class="s0">.word  0</span>
+  <span class="s0">.word  0</span>
+  <span class="s0">.word  0</span>
+  <span class="s0">.word  SVC_Handler</span>
+  <span class="s0">.word  DebugMon_Handler</span>
+  <span class="s0">.word  0</span>
+  <span class="s0">.word  PendSV_Handler</span>
+  <span class="s0">.word  SysTick_Handler</span>
+  
+  <span class="s0">/* External Interrupts */</span>
+  <span class="s0">.word     WWDG_IRQHandler                   /* Window WatchDog              */                                        </span>
+  <span class="s0">.word     PVD_IRQHandler                    /* PVD through EXTI Line detection */                        </span>
+  <span class="s0">.word     TAMP_STAMP_IRQHandler             /* Tamper and TimeStamps through the EXTI line */            </span>
+  <span class="s0">.word     RTC_WKUP_IRQHandler               /* RTC Wakeup through the EXTI line */                      </span>
+  <span class="s0">.word     FLASH_IRQHandler                  /* FLASH                        */                                          </span>
+  <span class="s0">.word     RCC_IRQHandler                    /* RCC                          */                                            </span>
+  <span class="s0">.word     EXTI0_IRQHandler                  /* EXTI Line0                   */                        </span>
+  <span class="s0">.word     EXTI1_IRQHandler                  /* EXTI Line1                   */                          </span>
+  <span class="s0">.word     EXTI2_IRQHandler                  /* EXTI Line2                   */                          </span>
+  <span class="s0">.word     EXTI3_IRQHandler                  /* EXTI Line3                   */                          </span>
+  <span class="s0">.word     EXTI4_IRQHandler                  /* EXTI Line4                   */                          </span>
+  <span class="s0">.word     DMA1_Stream0_IRQHandler           /* DMA1 Stream 0                */                  </span>
+  <span class="s0">.word     DMA1_Stream1_IRQHandler           /* DMA1 Stream 1                */                   </span>
+  <span class="s0">.word     DMA1_Stream2_IRQHandler           /* DMA1 Stream 2                */                   </span>
+  <span class="s0">.word     DMA1_Stream3_IRQHandler           /* DMA1 Stream 3                */                   </span>
+  <span class="s0">.word     DMA1_Stream4_IRQHandler           /* DMA1 Stream 4                */                   </span>
+  <span class="s0">.word     DMA1_Stream5_IRQHandler           /* DMA1 Stream 5                */                   </span>
+  <span class="s0">.word     DMA1_Stream6_IRQHandler           /* DMA1 Stream 6                */                   </span>
+  <span class="s0">.word     ADC_IRQHandler                    /* ADC1, ADC2 and ADC3s         */                   </span>
+  <span class="s0">.word     CAN1_TX_IRQHandler                /* CAN1 TX                      */                         </span>
+  <span class="s0">.word     CAN1_RX0_IRQHandler               /* CAN1 RX0                     */                          </span>
+  <span class="s0">.word     CAN1_RX1_IRQHandler               /* CAN1 RX1                     */                          </span>
+  <span class="s0">.word     CAN1_SCE_IRQHandler               /* CAN1 SCE                     */                          </span>
+  <span class="s0">.word     EXTI9_5_IRQHandler                /* External Line[9:5]s          */                          </span>
+  <span class="s0">.word     TIM1_BRK_TIM9_IRQHandler          /* TIM1 Break and TIM9          */         </span>
+  <span class="s0">.word     TIM1_UP_TIM10_IRQHandler          /* TIM1 Update and TIM10        */         </span>
+  <span class="s0">.word     TIM1_TRG_COM_TIM11_IRQHandler     /* TIM1 Trigger and Commutation and TIM11 */</span>
+  <span class="s0">.word     TIM1_CC_IRQHandler                /* TIM1 Capture Compare         */                          </span>
+  <span class="s0">.word     TIM2_IRQHandler                   /* TIM2                         */                   </span>
+  <span class="s0">.word     TIM3_IRQHandler                   /* TIM3                         */                   </span>
+  <span class="s0">.word     TIM4_IRQHandler                   /* TIM4                         */                   </span>
+  <span class="s0">.word     I2C1_EV_IRQHandler                /* I2C1 Event                   */                          </span>
+  <span class="s0">.word     I2C1_ER_IRQHandler                /* I2C1 Error                   */                          </span>
+  <span class="s0">.word     I2C2_EV_IRQHandler                /* I2C2 Event                   */                          </span>
+  <span class="s0">.word     I2C2_ER_IRQHandler                /* I2C2 Error                   */                            </span>
+  <span class="s0">.word     SPI1_IRQHandler                   /* SPI1                         */                   </span>
+  <span class="s0">.word     SPI2_IRQHandler                   /* SPI2                         */                   </span>
+  <span class="s0">.word     USART1_IRQHandler                 /* USART1                       */                   </span>
+  <span class="s0">.word     USART2_IRQHandler                 /* USART2                       */                   </span>
+  <span class="s0">.word     USART3_IRQHandler                 /* USART3                       */                   </span>
+  <span class="s0">.word     EXTI15_10_IRQHandler              /* External Line[15:10]s        */                          </span>
+  <span class="s0">.word     RTC_Alarm_IRQHandler              /* RTC Alarm (A and B) through EXTI Line */                 </span>
+  <span class="s0">.word     OTG_FS_WKUP_IRQHandler            /* USB OTG FS Wakeup through EXTI line */                       </span>
+  <span class="s0">.word     TIM8_BRK_TIM12_IRQHandler         /* TIM8 Break and TIM12         */         </span>
+  <span class="s0">.word     TIM8_UP_TIM13_IRQHandler          /* TIM8 Update and TIM13        */         </span>
+  <span class="s0">.word     TIM8_TRG_COM_TIM14_IRQHandler     /* TIM8 Trigger and Commutation and TIM14 */</span>
+  <span class="s0">.word     TIM8_CC_IRQHandler                /* TIM8 Capture Compare         */                          </span>
+  <span class="s0">.word     DMA1_Stream7_IRQHandler           /* DMA1 Stream7                 */                          </span>
+  <span class="s0">.word     FMC_IRQHandler                    /* FMC                          */                   </span>
+  <span class="s0">.word     SDIO_IRQHandler                   /* SDIO                         */                   </span>
+  <span class="s0">.word     TIM5_IRQHandler                   /* TIM5                         */                   </span>
+  <span class="s0">.word     SPI3_IRQHandler                   /* SPI3                         */                   </span>
+  <span class="s0">.word     UART4_IRQHandler                  /* UART4                        */                   </span>
+  <span class="s0">.word     UART5_IRQHandler                  /* UART5                        */                   </span>
+  <span class="s0">.word     TIM6_DAC_IRQHandler               /* TIM6 and DAC1&amp;2 underrun errors */                   </span>
+  <span class="s0">.word     TIM7_IRQHandler                   /* TIM7                         */</span>
+  <span class="s0">.word     DMA2_Stream0_IRQHandler           /* DMA2 Stream 0                */                   </span>
+  <span class="s0">.word     DMA2_Stream1_IRQHandler           /* DMA2 Stream 1                */                   </span>
+  <span class="s0">.word     DMA2_Stream2_IRQHandler           /* DMA2 Stream 2                */                   </span>
+  <span class="s0">.word     DMA2_Stream3_IRQHandler           /* DMA2 Stream 3                */                   </span>
+  <span class="s0">.word     DMA2_Stream4_IRQHandler           /* DMA2 Stream 4                */                   </span>
+  <span class="s0">.word     ETH_IRQHandler                    /* Ethernet                     */                   </span>
+  <span class="s0">.word     ETH_WKUP_IRQHandler               /* Ethernet Wakeup through EXTI line */                     </span>
+  <span class="s0">.word     CAN2_TX_IRQHandler                /* CAN2 TX                      */                          </span>
+  <span class="s0">.word     CAN2_RX0_IRQHandler               /* CAN2 RX0                     */                          </span>
+  <span class="s0">.word     CAN2_RX1_IRQHandler               /* CAN2 RX1                     */                          </span>
+  <span class="s0">.word     CAN2_SCE_IRQHandler               /* CAN2 SCE                     */                          </span>
+  <span class="s0">.word     OTG_FS_IRQHandler                 /* USB OTG FS                   */                   </span>
+  <span class="s0">.word     DMA2_Stream5_IRQHandler           /* DMA2 Stream 5                */                   </span>
+  <span class="s0">.word     DMA2_Stream6_IRQHandler           /* DMA2 Stream 6                */                   </span>
+  <span class="s0">.word     DMA2_Stream7_IRQHandler           /* DMA2 Stream 7                */                   </span>
+  <span class="s0">.word     USART6_IRQHandler                 /* USART6                       */                    </span>
+  <span class="s0">.word     I2C3_EV_IRQHandler                /* I2C3 event                   */                          </span>
+  <span class="s0">.word     I2C3_ER_IRQHandler                /* I2C3 error                   */                          </span>
+  <span class="s0">.word     OTG_HS_EP1_OUT_IRQHandler         /* USB OTG HS End Point 1 Out   */                   </span>
+  <span class="s0">.word     OTG_HS_EP1_IN_IRQHandler          /* USB OTG HS End Point 1 In    */                   </span>
+  <span class="s0">.word     OTG_HS_WKUP_IRQHandler            /* USB OTG HS Wakeup through EXTI */                         </span>
+  <span class="s0">.word     OTG_HS_IRQHandler                 /* USB OTG HS                   */                   </span>
+  <span class="s0">.word     DCMI_IRQHandler                   /* DCMI                         */                   </span>
+  <span class="s0">.word     0                                 /* Reserved                     */                   </span>
+  <span class="s0">.word     HASH_RNG_IRQHandler               /* Hash and Rng                 */</span>
+  <span class="s0">.word     FPU_IRQHandler                    /* FPU                          */</span>
+  <span class="s0">.word     UART7_IRQHandler                  /* UART7                        */      </span>
+  <span class="s0">.word     UART8_IRQHandler                  /* UART8                         */</span>
+  <span class="s0">.word     SPI4_IRQHandler                   /* SPI4                          */</span>
+  <span class="s0">.word     SPI5_IRQHandler                   /* SPI5 						  */</span>
+  <span class="s0">.word     SPI6_IRQHandler                   /* SPI6						  */</span>
+  <span class="s0">.word     SAI1_IRQHandler                   /* SAI1						  */</span>
+  <span class="s0">.word     0                                 /* Reserved					  */</span>
+  <span class="s0">.word     0                                 /* Reserved					  */</span>
+  <span class="s0">.word     DMA2D_IRQHandler                  /* DMA2D    					  */</span>
+
+  <span class="s0">.size  g_pfnVectors, .-g_pfnVectors</span>
+
+<span class="s0">/*******************************************************************************</span>
+<span class="s0">*</span>
+<span class="s0">* Provide weak aliases for each Exception handler to the Default_Handler. </span>
+<span class="s0">* As they are weak aliases, any function with the same name will override </span>
+<span class="s0">* this definition.</span>
+<span class="s0">* </span>
+<span class="s0">*******************************************************************************/</span>
+   <span class="s0">.weak      NMI_Handler</span>
+   <span class="s0">.thumb_set NMI_Handler,Default_Handler</span>
+  
+   <span class="s0">.weak      HardFault_Handler</span>
+   <span class="s0">.thumb_set HardFault_Handler,Default_Handler</span>
+  
+   <span class="s0">.weak      MemManage_Handler</span>
+   <span class="s0">.thumb_set MemManage_Handler,Default_Handler</span>
+  
+   <span class="s0">.weak      BusFault_Handler</span>
+   <span class="s0">.thumb_set BusFault_Handler,Default_Handler</span>
+
+   <span class="s0">.weak      UsageFault_Handler</span>
+   <span class="s0">.thumb_set UsageFault_Handler,Default_Handler</span>
+
+   <span class="s0">.weak      SVC_Handler</span>
+   <span class="s0">.thumb_set SVC_Handler,Default_Handler</span>
+
+   <span class="s0">.weak      DebugMon_Handler</span>
+   <span class="s0">.thumb_set DebugMon_Handler,Default_Handler</span>
+
+   <span class="s0">.weak      PendSV_Handler</span>
+   <span class="s0">.thumb_set PendSV_Handler,Default_Handler</span>
+
+   <span class="s0">.weak      SysTick_Handler</span>
+   <span class="s0">.thumb_set SysTick_Handler,Default_Handler              </span>
+  
+   <span class="s0">.weak      WWDG_IRQHandler                   </span>
+   <span class="s0">.thumb_set WWDG_IRQHandler,Default_Handler      </span>
+                  
+   <span class="s0">.weak      PVD_IRQHandler      </span>
+   <span class="s0">.thumb_set PVD_IRQHandler,Default_Handler</span>
+               
+   <span class="s0">.weak      TAMP_STAMP_IRQHandler            </span>
+   <span class="s0">.thumb_set TAMP_STAMP_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      RTC_WKUP_IRQHandler                  </span>
+   <span class="s0">.thumb_set RTC_WKUP_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      FLASH_IRQHandler         </span>
+   <span class="s0">.thumb_set FLASH_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      RCC_IRQHandler      </span>
+   <span class="s0">.thumb_set RCC_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      EXTI0_IRQHandler         </span>
+   <span class="s0">.thumb_set EXTI0_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      EXTI1_IRQHandler         </span>
+   <span class="s0">.thumb_set EXTI1_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      EXTI2_IRQHandler         </span>
+   <span class="s0">.thumb_set EXTI2_IRQHandler,Default_Handler </span>
+                 
+   <span class="s0">.weak      EXTI3_IRQHandler         </span>
+   <span class="s0">.thumb_set EXTI3_IRQHandler,Default_Handler</span>
+                        
+   <span class="s0">.weak      EXTI4_IRQHandler         </span>
+   <span class="s0">.thumb_set EXTI4_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA1_Stream0_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA1_Stream0_IRQHandler,Default_Handler</span>
+         
+   <span class="s0">.weak      DMA1_Stream1_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA1_Stream1_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA1_Stream2_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA1_Stream2_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA1_Stream3_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA1_Stream3_IRQHandler,Default_Handler </span>
+                 
+   <span class="s0">.weak      DMA1_Stream4_IRQHandler              </span>
+   <span class="s0">.thumb_set DMA1_Stream4_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA1_Stream5_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA1_Stream5_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA1_Stream6_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA1_Stream6_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      ADC_IRQHandler      </span>
+   <span class="s0">.thumb_set ADC_IRQHandler,Default_Handler</span>
+               
+   <span class="s0">.weak      CAN1_TX_IRQHandler   </span>
+   <span class="s0">.thumb_set CAN1_TX_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      CAN1_RX0_IRQHandler                  </span>
+   <span class="s0">.thumb_set CAN1_RX0_IRQHandler,Default_Handler</span>
+                           
+   <span class="s0">.weak      CAN1_RX1_IRQHandler                  </span>
+   <span class="s0">.thumb_set CAN1_RX1_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      CAN1_SCE_IRQHandler                  </span>
+   <span class="s0">.thumb_set CAN1_SCE_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      EXTI9_5_IRQHandler   </span>
+   <span class="s0">.thumb_set EXTI9_5_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      TIM1_BRK_TIM9_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM1_BRK_TIM9_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      TIM1_UP_TIM10_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM1_UP_TIM10_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      TIM1_TRG_COM_TIM11_IRQHandler      </span>
+   <span class="s0">.thumb_set TIM1_TRG_COM_TIM11_IRQHandler,Default_Handler</span>
+      
+   <span class="s0">.weak      TIM1_CC_IRQHandler   </span>
+   <span class="s0">.thumb_set TIM1_CC_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      TIM2_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM2_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      TIM3_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM3_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      TIM4_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM4_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      I2C1_EV_IRQHandler   </span>
+   <span class="s0">.thumb_set I2C1_EV_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      I2C1_ER_IRQHandler   </span>
+   <span class="s0">.thumb_set I2C1_ER_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      I2C2_EV_IRQHandler   </span>
+   <span class="s0">.thumb_set I2C2_EV_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      I2C2_ER_IRQHandler   </span>
+   <span class="s0">.thumb_set I2C2_ER_IRQHandler,Default_Handler</span>
+                           
+   <span class="s0">.weak      SPI1_IRQHandler            </span>
+   <span class="s0">.thumb_set SPI1_IRQHandler,Default_Handler</span>
+                        
+   <span class="s0">.weak      SPI2_IRQHandler            </span>
+   <span class="s0">.thumb_set SPI2_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      USART1_IRQHandler      </span>
+   <span class="s0">.thumb_set USART1_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      USART2_IRQHandler      </span>
+   <span class="s0">.thumb_set USART2_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      USART3_IRQHandler      </span>
+   <span class="s0">.thumb_set USART3_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      EXTI15_10_IRQHandler               </span>
+   <span class="s0">.thumb_set EXTI15_10_IRQHandler,Default_Handler</span>
+               
+   <span class="s0">.weak      RTC_Alarm_IRQHandler               </span>
+   <span class="s0">.thumb_set RTC_Alarm_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      OTG_FS_WKUP_IRQHandler         </span>
+   <span class="s0">.thumb_set OTG_FS_WKUP_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      TIM8_BRK_TIM12_IRQHandler         </span>
+   <span class="s0">.thumb_set TIM8_BRK_TIM12_IRQHandler,Default_Handler</span>
+         
+   <span class="s0">.weak      TIM8_UP_TIM13_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM8_UP_TIM13_IRQHandler,Default_Handler</span>
+         
+   <span class="s0">.weak      TIM8_TRG_COM_TIM14_IRQHandler      </span>
+   <span class="s0">.thumb_set TIM8_TRG_COM_TIM14_IRQHandler,Default_Handler</span>
+      
+   <span class="s0">.weak      TIM8_CC_IRQHandler   </span>
+   <span class="s0">.thumb_set TIM8_CC_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA1_Stream7_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA1_Stream7_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      FMC_IRQHandler            </span>
+   <span class="s0">.thumb_set FMC_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      SDIO_IRQHandler            </span>
+   <span class="s0">.thumb_set SDIO_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      TIM5_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM5_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      SPI3_IRQHandler            </span>
+   <span class="s0">.thumb_set SPI3_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      UART4_IRQHandler         </span>
+   <span class="s0">.thumb_set UART4_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      UART5_IRQHandler         </span>
+   <span class="s0">.thumb_set UART5_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      TIM6_DAC_IRQHandler                  </span>
+   <span class="s0">.thumb_set TIM6_DAC_IRQHandler,Default_Handler</span>
+               
+   <span class="s0">.weak      TIM7_IRQHandler            </span>
+   <span class="s0">.thumb_set TIM7_IRQHandler,Default_Handler</span>
+         
+   <span class="s0">.weak      DMA2_Stream0_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream0_IRQHandler,Default_Handler</span>
+               
+   <span class="s0">.weak      DMA2_Stream1_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream1_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA2_Stream2_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream2_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      DMA2_Stream3_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream3_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      DMA2_Stream4_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream4_IRQHandler,Default_Handler</span>
+   
+   <span class="s0">.weak      ETH_IRQHandler               </span>
+   <span class="s0">.thumb_set ETH_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      ETH_WKUP_IRQHandler               </span>
+   <span class="s0">.thumb_set ETH_WKUP_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      CAN2_TX_IRQHandler   </span>
+   <span class="s0">.thumb_set CAN2_TX_IRQHandler,Default_Handler</span>
+                           
+   <span class="s0">.weak      CAN2_RX0_IRQHandler                  </span>
+   <span class="s0">.thumb_set CAN2_RX0_IRQHandler,Default_Handler</span>
+                           
+   <span class="s0">.weak      CAN2_RX1_IRQHandler                  </span>
+   <span class="s0">.thumb_set CAN2_RX1_IRQHandler,Default_Handler</span>
+                           
+   <span class="s0">.weak      CAN2_SCE_IRQHandler                  </span>
+   <span class="s0">.thumb_set CAN2_SCE_IRQHandler,Default_Handler</span>
+                           
+   <span class="s0">.weak      OTG_FS_IRQHandler      </span>
+   <span class="s0">.thumb_set OTG_FS_IRQHandler,Default_Handler</span>
+                     
+   <span class="s0">.weak      DMA2_Stream5_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream5_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA2_Stream6_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream6_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DMA2_Stream7_IRQHandler               </span>
+   <span class="s0">.thumb_set DMA2_Stream7_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      USART6_IRQHandler      </span>
+   <span class="s0">.thumb_set USART6_IRQHandler,Default_Handler</span>
+                        
+   <span class="s0">.weak      I2C3_EV_IRQHandler   </span>
+   <span class="s0">.thumb_set I2C3_EV_IRQHandler,Default_Handler</span>
+                        
+   <span class="s0">.weak      I2C3_ER_IRQHandler   </span>
+   <span class="s0">.thumb_set I2C3_ER_IRQHandler,Default_Handler</span>
+                        
+   <span class="s0">.weak      OTG_HS_EP1_OUT_IRQHandler         </span>
+   <span class="s0">.thumb_set OTG_HS_EP1_OUT_IRQHandler,Default_Handler</span>
+               
+   <span class="s0">.weak      OTG_HS_EP1_IN_IRQHandler            </span>
+   <span class="s0">.thumb_set OTG_HS_EP1_IN_IRQHandler,Default_Handler</span>
+               
+   <span class="s0">.weak      OTG_HS_WKUP_IRQHandler         </span>
+   <span class="s0">.thumb_set OTG_HS_WKUP_IRQHandler,Default_Handler</span>
+            
+   <span class="s0">.weak      OTG_HS_IRQHandler      </span>
+   <span class="s0">.thumb_set OTG_HS_IRQHandler,Default_Handler</span>
+                  
+   <span class="s0">.weak      DCMI_IRQHandler            </span>
+   <span class="s0">.thumb_set DCMI_IRQHandler,Default_Handler</span>
+                                   
+   <span class="s0">.weak      HASH_RNG_IRQHandler                  </span>
+   <span class="s0">.thumb_set HASH_RNG_IRQHandler,Default_Handler   </span>
+
+   <span class="s0">.weak      FPU_IRQHandler                  </span>
+   <span class="s0">.thumb_set FPU_IRQHandler,Default_Handler  </span>
+
+   <span class="s0">.weak      UART7_IRQHandler            </span>
+   <span class="s0">.thumb_set UART7_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      UART8_IRQHandler            </span>
+   <span class="s0">.thumb_set UART8_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      SPI4_IRQHandler            </span>
+   <span class="s0">.thumb_set SPI4_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      SPI5_IRQHandler            </span>
+   <span class="s0">.thumb_set SPI5_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      SPI6_IRQHandler            </span>
+   <span class="s0">.thumb_set SPI6_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      SAI1_IRQHandler            </span>
+   <span class="s0">.thumb_set SAI1_IRQHandler,Default_Handler</span>
+
+   <span class="s0">.weak      DMA2D_IRQHandler            </span>
+   <span class="s0">.thumb_set DMA2D_IRQHandler,Default_Handler</span>
+</pre>
+</body>
+</html>

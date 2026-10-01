@@ -1,0 +1,92 @@
+<html>
+<head>
+<title>CMakeLists.txt</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #ffc66d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #7a7e85;}
+.s4 { color: #cf8e6d;}
+.s5 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#191a1c">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+CMakeLists.txt</font>
+</center></td></tr></table>
+<pre><span class="s0">cmake_minimum_required</span><span class="s1">(VERSION 3.22)</span>
+
+<span class="s3">#</span>
+<span class="s3"># This file is generated only once,</span>
+<span class="s3"># and is not re-generated if converter is called multiple times.</span>
+<span class="s3">#</span>
+<span class="s3"># User is free to modify the file as much as necessary</span>
+<span class="s3">#</span>
+
+<span class="s3"># Setup compiler settings</span>
+<span class="s0">set</span><span class="s1">(CMAKE_C_STANDARD 11)</span>
+<span class="s0">set</span><span class="s1">(CMAKE_C_STANDARD_REQUIRED ON)</span>
+<span class="s0">set</span><span class="s1">(CMAKE_C_EXTENSIONS ON)</span>
+
+
+<span class="s3"># Define the build type</span>
+<span class="s4">if</span><span class="s1">(NOT CMAKE_BUILD_TYPE)</span>
+    <span class="s0">set</span><span class="s1">(CMAKE_BUILD_TYPE </span><span class="s5">&quot;</span><span class="s1">Debug</span><span class="s5">&quot;</span><span class="s1">)</span>
+<span class="s4">endif</span><span class="s1">()</span>
+
+<span class="s3"># Set the project name</span>
+<span class="s0">set</span><span class="s1">(CMAKE_PROJECT_NAME diankongdiandengcode)</span>
+
+<span class="s3"># Enable compile command to ease indexing with e.g. clangd</span>
+<span class="s0">set</span><span class="s1">(CMAKE_EXPORT_COMPILE_COMMANDS TRUE)</span>
+
+<span class="s3"># Core project settings</span>
+<span class="s0">project</span><span class="s1">(</span><span class="s4">${</span><span class="s1">CMAKE_PROJECT_NAME</span><span class="s4">}</span><span class="s1">)</span>
+<span class="s0">message</span><span class="s1">(</span><span class="s5">&quot;</span><span class="s1">Build type: </span><span class="s5">&quot; </span><span class="s4">${</span><span class="s1">CMAKE_BUILD_TYPE</span><span class="s4">}</span><span class="s1">)</span>
+
+<span class="s3"># Enable CMake support for ASM and C languages</span>
+<span class="s0">enable_language</span><span class="s1">(C ASM)</span>
+
+<span class="s3"># Create an executable object type</span>
+<span class="s0">add_executable</span><span class="s1">(</span><span class="s4">${</span><span class="s1">CMAKE_PROJECT_NAME</span><span class="s4">}</span>
+        <span class="s1">Core/Src/callback.cpp</span>
+        <span class="s1">Core/Src/callback.c)</span>
+
+<span class="s3"># Add STM32CubeMX generated sources</span>
+<span class="s0">add_subdirectory</span><span class="s1">(cmake/stm32cubemx)</span>
+
+<span class="s3"># Link directories setup</span>
+<span class="s0">target_link_directories</span><span class="s1">(</span><span class="s4">${</span><span class="s1">CMAKE_PROJECT_NAME</span><span class="s4">} </span><span class="s1">PRIVATE</span>
+    <span class="s3"># Add user defined library search paths</span>
+<span class="s1">)</span>
+
+<span class="s3"># Add sources to executable</span>
+<span class="s0">target_sources</span><span class="s1">(</span><span class="s4">${</span><span class="s1">CMAKE_PROJECT_NAME</span><span class="s4">} </span><span class="s1">PRIVATE</span>
+    <span class="s3"># Add user sources here</span>
+<span class="s1">)</span>
+
+<span class="s3"># Add include paths</span>
+<span class="s0">target_include_directories</span><span class="s1">(</span><span class="s4">${</span><span class="s1">CMAKE_PROJECT_NAME</span><span class="s4">} </span><span class="s1">PRIVATE</span>
+    <span class="s3"># Add user defined include paths</span>
+<span class="s1">)</span>
+
+<span class="s3"># Add project symbols (macros)</span>
+<span class="s0">target_compile_definitions</span><span class="s1">(</span><span class="s4">${</span><span class="s1">CMAKE_PROJECT_NAME</span><span class="s4">} </span><span class="s1">PRIVATE</span>
+    <span class="s3"># Add user defined symbols</span>
+<span class="s1">)</span>
+
+<span class="s3"># Remove wrong libob.a library dependency when using cpp files</span>
+<span class="s0">list</span><span class="s1">(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)</span>
+
+<span class="s3"># Add linked libraries</span>
+<span class="s0">target_link_libraries</span><span class="s1">(</span><span class="s4">${</span><span class="s1">CMAKE_PROJECT_NAME</span><span class="s4">}</span>
+    <span class="s1">stm32cubemx</span>
+
+    <span class="s3"># Add user defined libraries</span>
+<span class="s1">)</span>
+</pre>
+</body>
+</html>
